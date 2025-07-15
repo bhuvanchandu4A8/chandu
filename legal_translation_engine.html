@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Document Translation Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .drag-over {
+            border-color: #3b82f6 !important;
+            background-color: #eff6ff !important;
+        }
+        
+        .terminology-highlight {
+            background-color: #fef3c7;
+            border-bottom: 2px solid #f59e0b;
+            cursor: pointer;
+        }
+        
+        .translation-comparison {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .metric-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dasharray 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .loading-spinner {
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .sidebar-nav {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-nav:hover {
+            background-color: #f1f5f9;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">LT</span>
+                    </div>
+                    <h1 class="ml-3 text-xl font-semibold text-gray-900">Legal Translation Engine</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        Export Report
+                    </button>
+                    <div class="w-8 h-8 bg-gray-300 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-12 gap-6">
+            <!-- Sidebar Navigation -->
+            <div class="col-span-12 lg:col-span-3">
+                <nav class="bg-white rounded-xl shadow-sm p-4">
+                    <ul class="space-y-2">
+                        <li>
+                            <button class="sidebar-nav w-full text-left px-4 py-3 rounded-lg bg-blue-50 text-blue-700 font-medium" onclick="showSection('translation')">
+                                Document Translation
+                            </button>
+                        </li>
+                        <li>
+                            <button class="sidebar-nav w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:text-gray-900" onclick="showSection('terminology')">
+                                Terminology Database
+                            </button>
+                        </li>
+                        <li>
+                            <button class="sidebar-nav w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:text-gray-900" onclick="showSection('analytics')">
+                                Analytics Dashboard
+                            </button>
+                        </li>
+                        <li>
+                            <button class="sidebar-nav w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:text-gray-900" onclick="showSection('survey')">
+                                User Feedback
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="col-span-12 lg:col-span-9">
+                <!-- Translation Section -->
+                <div id="translation-section" class="section">
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-6">Document Translation</h2>
+                        
+                        <!-- Upload Area -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Upload Document</label>
+                                <div id="upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
+                                    <div class="w-16 h-16 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                                        <span class="text-2xl text-gray-400">📄</span>
+                                    </div>
+                                    <p class="text-lg font-medium text-gray-900 mb-2">Drag and drop your legal document</p>
+                                    <p class="text-sm text-gray-500 mb-4">Supports PDF, DOCX, TXT files up to 50MB</p>
+                                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                        Browse Files
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Source Language</label>
+                                    <select id="source-lang" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="en">English</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="fr">French</option>
+                                        <option value="de">German</option>
+                                        <option value="it">Italian</option>
+                                        <option value="pt">Portuguese</option>
+                                        <option value="hi">Hindi</option>
+                                        <option value="te">Telugu</option>
+                                        <option value="ta">Tamil</option>
+                                        <option value="bn">Bengali</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Target Language</label>
+                                    <select id="target-lang" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="es">Spanish</option>
+                                        <option value="en">English</option>
+                                        <option value="fr">French</option>
+                                        <option value="de">German</option>
+                                        <option value="it">Italian</option>
+                                        <option value="pt">Portuguese</option>
+                                        <option value="hi">Hindi</option>
+                                        <option value="te">Telugu</option>
+                                        <option value="ta">Tamil</option>
+                                        <option value="bn">Bengali</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                                    <select id="doc-type" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="contract">Contract</option>
+                                        <option value="patent">Patent</option>
+                                        <option value="court">Court Document</option>
+                                        <option value="regulation">Regulation</option>
+                                        <option value="agreement">Agreement</option>
+                                        <option value="certificate">Certificate</option>
+                                    </select>
+                                </div>
+                                
+                                <button id="translate-btn" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                                    Start Translation
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Translation Progress -->
+                        <div id="translation-progress" class="hidden mb-6">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <div class="flex items-center">
+                                    <div class="loading-spinner mr-4"></div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-blue-900">Processing Translation...</p>
+                                        <div class="w-full bg-blue-200 rounded-full h-2 mt-2">
+                                            <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Translation Results -->
+                        <div id="translation-results" class="hidden">
+                            <div class="translation-comparison rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Translation Results</h3>
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-700 mb-2">Original Text</h4>
+                                        <div id="original-text" class="bg-white border border-gray-200 rounded-lg p-4 h-64 overflow-y-auto text-sm">
+                                            <!-- Original text will be displayed here -->
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-700 mb-2">Translated Text</h4>
+                                        <div id="translated-text" class="bg-white border border-gray-200 rounded-lg p-4 h-64 overflow-y-auto text-sm">
+                                            <!-- Translated text will be displayed here -->
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Notes Section -->
+                                <div class="mt-6">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Legal Review Comments</label>
+                                    <textarea id="review-notes" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="Add your legal review comments and notes here..."></textarea>
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div class="flex space-x-4 mt-6">
+                                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                        Download Translation
+                                    </button>
+                                    <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                        Save to Database
+                                    </button>
+                                    <button class="border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors">
+                                        Request Review
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminology Database Section -->
+                <div id="terminology-section" class="section hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-6">Terminology Database</h2>
+                        
+                        <!-- Search and Filter -->
+                        <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                            <input type="text" id="term-search" placeholder="Search legal terms..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <select id="term-category" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">All Categories</option>
+                                <option value="contract">Contract Law</option>
+                                <option value="criminal">Criminal Law</option>
+                                <option value="corporate">Corporate Law</option>
+                                <option value="intellectual">Intellectual Property</option>
+                                <option value="international">International Law</option>
+                            </select>
+                            <button class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors whitespace-nowrap">
+                                Add Term
+                            </button>
+                        </div>
+                        
+                        <!-- Terminology Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full table-auto">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">English Term</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Translation</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Language</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Category</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Approved</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="terminology-table" class="divide-y divide-gray-200">
+                                    <!-- Terms will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Dashboard Section -->
+                <div id="analytics-section" class="section hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-6">Analytics Dashboard</h2>
+                        
+                        <!-- Key Metrics -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                            <div class="metric-card bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-blue-100 text-sm">Translation Accuracy</p>
+                                        <p class="text-3xl font-bold">94.8%</p>
+                                    </div>
+                                    <div class="w-16 h-16 bg-blue-400 bg-opacity-30 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">🎯</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-green-100 text-sm">Avg. Turnaround</p>
+                                        <p class="text-3xl font-bold">2.3h</p>
+                                    </div>
+                                    <div class="w-16 h-16 bg-green-400 bg-opacity-30 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">⚡</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-purple-100 text-sm">Documents Processed</p>
+                                        <p class="text-3xl font-bold">1,247</p>
+                                    </div>
+                                    <div class="w-16 h-16 bg-purple-400 bg-opacity-30 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">📊</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-orange-100 text-sm">User Satisfaction</p>
+                                        <p class="text-3xl font-bold">4.7/5</p>
+                                    </div>
+                                    <div class="w-16 h-16 bg-orange-400 bg-opacity-30 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">⭐</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-gray-50 rounded-xl p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Translation Accuracy Over Time</h3>
+                                <div class="chart-container">
+                                    <canvas id="accuracy-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 rounded-xl p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Processing Time Distribution</h3>
+                                <div class="chart-container">
+                                    <canvas id="timing-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Benchmark Comparison -->
+                        <div class="mt-6 bg-gray-50 rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Benchmark Comparison</h3>
+                            <div class="chart-container">
+                                <canvas id="benchmark-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Feedback Section -->
+                <div id="survey-section" class="section hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-6">User Satisfaction Survey</h2>
+                        
+                        <form id="feedback-form" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Overall Satisfaction</label>
+                                <div class="flex space-x-2">
+                                    <button type="button" class="rating-btn w-12 h-12 rounded-full border-2 border-gray-300 hover:border-yellow-400 transition-colors" data-rating="1">⭐</button>
+                                    <button type="button" class="rating-btn w-12 h-12 rounded-full border-2 border-gray-300 hover:border-yellow-400 transition-colors" data-rating="2">⭐</button>
+                                    <button type="button" class="rating-btn w-12 h-12 rounded-full border-2 border-gray-300 hover:border-yellow-400 transition-colors" data-rating="3">⭐</button>
+                                    <button type="button" class="rating-btn w-12 h-12 rounded-full border-2 border-gray-300 hover:border-yellow-400 transition-colors" data-rating="4">⭐</button>
+                                    <button type="button" class="rating-btn w-12 h-12 rounded-full border-2 border-gray-300 hover:border-yellow-400 transition-colors" data-rating="5">⭐</button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Translation Quality</label>
+                                <select class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option>Excellent - No corrections needed</option>
+                                    <option>Good - Minor corrections required</option>
+                                    <option>Fair - Some corrections needed</option>
+                                    <option>Poor - Major corrections required</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Processing Speed</label>
+                                <select class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option>Very Fast - Under 30 minutes</option>
+                                    <option>Fast - 30 minutes to 1 hour</option>
+                                    <option>Acceptable - 1-3 hours</option>
+                                    <option>Slow - Over 3 hours</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Ease of Use</label>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="ease" value="easy" class="mr-2">
+                                        <span>Very Easy</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="ease" value="moderate" class="mr-2">
+                                        <span>Moderate</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="ease" value="difficult" class="mr-2">
+                                        <span>Difficult</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Additional Comments</label>
+                                <textarea class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="4" placeholder="Please share any additional feedback or suggestions..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                                Submit Feedback
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let translationData = JSON.parse(localStorage.getItem('translationData')) || {
+            documents: [],
+            terminology: [
+                { english: "Contract", translation: "Contrato", language: "Spanish", category: "contract", approved: true },
+                { english: "Liability", translation: "Responsabilidad", language: "Spanish", category: "contract", approved: true },
+                { english: "Patent", translation: "Patente", language: "Spanish", category: "intellectual", approved: true },
+                { english: "Court", translation: "Tribunal", language: "Spanish", category: "criminal", approved: true },
+                { english: "Agreement", translation: "Acuerdo", language: "Spanish", category: "contract", approved: false },
+            ],
+            analytics: {
+                accuracy: [92, 93, 94, 95, 94, 96, 94.8],
+                processingTimes: [1.2, 2.1, 1.8, 2.5, 2.3, 1.9, 2.4],
+                benchmarks: { ourSystem: 94.8, competitor1: 91.2, competitor2: 89.5, industry: 87.3 }
+            },
+            feedback: []
+        };
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeUploadArea();
+            initializeTerminologyTable();
+            initializeCharts();
+            bindEventListeners();
+        });
+
+        // Section navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(`${sectionName}-section`).classList.remove('hidden');
+            
+            // Update navigation
+            document.querySelectorAll('.sidebar-nav').forEach(nav => {
+                nav.classList.remove('bg-blue-50', 'text-blue-700', 'font-medium');
+                nav.classList.add('text-gray-600');
+            });
+            
+            event.target.classList.add('bg-blue-50', 'text-blue-700', 'font-medium');
+            event.target.classList.remove('text-gray-600');
+        }
+
+        // Upload area functionality
+        function initializeUploadArea() {
+            const uploadArea = document.getElementById('upload-area');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) {
+                uploadArea.classList.add('drag-over');
+            }
+
+            function unhighlight(e) {
+                uploadArea.classList.remove('drag-over');
+            }
+
+            uploadArea.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+
+            uploadArea.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pdf,.docx,.txt';
+                input.onchange = (e) => handleFiles(e.target.files);
+                input.click();
+            });
+        }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                const uploadArea = document.getElementById('upload-area');
+                uploadArea.innerHTML = `
+                    <div class="w-16 h-16 bg-green-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                        <span class="text-2xl text-green-600">✓</span>
+                    </div>
+                    <p class="text-lg font-medium text-gray-900 mb-2">File uploaded successfully</p>
+                    <p class="text-sm text-gray-500">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                `;
+            }
+        }
+
+        // Translation functionality
+        function bindEventListeners() {
+            document.getElementById('translate-btn').addEventListener('click', startTranslation);
+            document.getElementById('feedback-form').addEventListener('submit', submitFeedback);
+            
+            // Rating buttons
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const rating = this.dataset.rating;
+                    document.querySelectorAll('.rating-btn').forEach(b => {
+                        b.classList.remove('bg-yellow-400', 'border-yellow-400');
+                        b.classList.add('border-gray-300');
+                    });
+                    
+                    for (let i = 1; i <= rating; i++) {
+                        const btn = document.querySelector(`[data-rating="${i}"]`);
+                        btn.classList.add('bg-yellow-400', 'border-yellow-400');
+                        btn.classList.remove('border-gray-300');
+                    }
+                });
+            });
+        }
+
+        async function startTranslation() {
+            const sourceText = generateSampleLegalText();
+            const targetLang = document.getElementById('target-lang').value;
+            
+            // Show progress
+            document.getElementById('translation-progress').classList.remove('hidden');
+            
+            // Simulate translation process
+            let progress = 0;
+            const progressBar = document.getElementById('progress-bar');
+            
+            const interval = setInterval(() => {
+                progress += Math.random() * 20;
+                if (progress > 100) progress = 100;
+                
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        showTranslationResults(sourceText, targetLang);
+                    }, 500);
+                }
+            }, 200);
+        }
+
+        function generateSampleLegalText() {
+            return `AGREEMENT FOR LEGAL SERVICES
+
+This Agreement for Legal Services ("Agreement") is entered into on [Date], between [Client Name], a [State] corporation ("Client"), and [Law Firm Name], a professional corporation ("Attorney").
+
+WHEREAS, Client desires to retain Attorney to provide legal services; and
+WHEREAS, Attorney agrees to provide such services subject to the terms and conditions set forth herein;
+
+NOW, THEREFORE, in consideration of the mutual covenants contained herein, the parties agree as follows:
+
+1. SCOPE OF SERVICES
+Attorney agrees to provide legal services to Client in connection with [Description of Legal Matter]. The specific services to be provided include, but are not limited to: legal research, document preparation, contract review, and representation in negotiations.
+
+2. FEES AND EXPENSES
+Client agrees to pay Attorney fees at the rate of $[Amount] per hour for services rendered. All expenses incurred in connection with the representation shall be reimbursed by Client.
+
+3. TERM AND TERMINATION
+This Agreement shall commence on [Date] and shall continue until the completion of the legal matter or earlier termination by either party upon written notice.`;
+        }
+
+        function showTranslationResults(originalText, targetLang) {
+            document.getElementById('translation-progress').classList.add('hidden');
+            document.getElementById('translation-results').classList.remove('hidden');
+            
+            // Simulate translated text
+            const translatedText = simulateTranslation(originalText, targetLang);
+            
+            document.getElementById('original-text').innerHTML = highlightTerminology(originalText);
+            document.getElementById('translated-text').innerHTML = highlightTerminology(translatedText);
+            
+            // Update analytics
+            updateAnalytics();
+        }
+
+        function simulateTranslation(text, targetLang) {
+            // Simple simulation - in real implementation, this would call actual translation API
+            const translations = {
+                'es': text.replace(/Agreement/g, 'Acuerdo')
+                         .replace(/Client/g, 'Cliente')
+                         .replace(/Attorney/g, 'Abogado')
+                         .replace(/Services/g, 'Servicios')
+                         .replace(/Legal/g, 'Legal'),
+                'fr': text.replace(/Agreement/g, 'Accord')
+                         .replace(/Client/g, 'Client')
+                         .replace(/Attorney/g, 'Avocat')
+                         .replace(/Services/g, 'Services')
+                         .replace(/Legal/g, 'Juridique'),
+                'hi': text.replace(/Agreement/g, 'समझौता')
+                         .replace(/Client/g, 'ग्राहक')
+                         .replace(/Attorney/g, 'वकील')
+                         .replace(/Services/g, 'सेवाएं')
+                         .replace(/Legal/g, 'कानूनी'),
+                'te': text.replace(/Agreement/g, 'ఒప్పందం')
+                         .replace(/Client/g, 'క్లయింట్')
+                         .replace(/Attorney/g, 'న్యాయవాది')
+                         .replace(/Services/g, 'సేవలు')
+                         .replace(/Legal/g, 'చట్టపరమైన')
+            };
+            
+            return translations[targetLang] || text;
+        }
+
+        function highlightTerminology(text) {
+            const terms = ['Agreement', 'Client', 'Attorney', 'Services', 'Legal', 'Contract', 'Liability'];
+            let highlightedText = text;
+            
+            terms.forEach(term => {
+                const regex = new RegExp(`\\b${term}\\b`, 'gi');
+                highlightedText = highlightedText.replace(regex, `<span class="terminology-highlight" title="Legal terminology - click for definition">${term}</span>`);
+            });
+            
+            return highlightedText;
+        }
+
+        // Terminology database
+        function initializeTerminologyTable() {
+            const tableBody = document.getElementById('terminology-table');
+            tableBody.innerHTML = '';
+            
+            translationData.terminology.forEach((term, index) => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-gray-900">${term.english}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900">${term.translation}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${term.language}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${term.category}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${term.approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                            ${term.approved ? 'Approved' : 'Pending'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button class="text-blue-600 hover:text-blue-900 text-sm mr-2">Edit</button>
+                        <button class="text-red-600 hover:text-red-900 text-sm">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Analytics and charts
+        function initializeCharts() {
+            // Accuracy chart
+            const accuracyCtx = document.getElementById('accuracy-chart');
+            if (accuracyCtx) {
+                new Chart(accuracyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'Translation Accuracy %',
+                            data: translationData.analytics.accuracy,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                min: 85,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Timing chart
+            const timingCtx = document.getElementById('timing-chart');
+            if (timingCtx) {
+                new Chart(timingCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-1h', '1-2h', '2-3h', '3-4h', '4-5h', '5h+'],
+                        datasets: [{
+                            label: 'Number of Documents',
+                            data: [45, 32, 28, 15, 8, 3],
+                            backgroundColor: '#10b981'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            // Benchmark chart
+            const benchmarkCtx = document.getElementById('benchmark-chart');
+            if (benchmarkCtx) {
+                new Chart(benchmarkCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Accuracy', 'Speed', 'Cost Effectiveness', 'User Satisfaction', 'Coverage'],
+                        datasets: [{
+                            label: 'Our System',
+                            data: [94.8, 85, 90, 88, 92],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                        }, {
+                            label: 'Industry Average',
+                            data: [87.3, 78, 82, 80, 85],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Feedback form
+        function submitFeedback(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const feedback = {
+                timestamp: new Date().toISOString(),
+                rating: document.querySelectorAll('.rating-btn.bg-yellow-400').length,
+                quality: formData.get('quality'),
+                speed: formData.get('speed'),
+                ease: formData.get('ease'),
+                comments: formData.get('comments')
+            };
+            
+            translationData.feedback.push(feedback);
+            localStorage.setItem('translationData', JSON.stringify(translationData));
+            
+            alert('Thank you for your feedback! Your response has been recorded.');
+            e.target.reset();
+            
+            // Reset rating buttons
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-400', 'border-yellow-400');
+                btn.classList.add('border-gray-300');
+            });
+        }
+
+        function updateAnalytics() {
+            // Simulate updating analytics with new translation
+            const newAccuracy = 93 + Math.random() * 4;
+            const newTime = 1 + Math.random() * 3;
+            
+            translationData.analytics.accuracy.push(newAccuracy);
+            translationData.analytics.processingTimes.push(newTime);
+            
+            // Keep only last 7 entries
+            if (translationData.analytics.accuracy.length > 7) {
+                translationData.analytics.accuracy.shift();
+                translationData.analytics.processingTimes.shift();
+            }
+            
+            localStorage.setItem('translationData', JSON.stringify(translationData));
+        }
+
+        // Error handling
+        window.addEventListener('error', function(e) {
+            console.error('Application error:', e.error);
+            alert('An error occurred. Please try again or contact support if the problem persists.');
+        });
+
+        // Auto-save functionality
+        setInterval(() => {
+            const notes = document.getElementById('review-notes')?.value;
+            if (notes) {
+                localStorage.setItem('reviewNotes', notes);
+            }
+        }, 30000); // Auto-save every 30 seconds
+    </script>
+</body>
+</html>
